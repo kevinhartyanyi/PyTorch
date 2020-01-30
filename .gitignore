@@ -2,7 +2,6 @@
 .jpg
 .gif
 practice/cs231n/datasets/
-practice/assignments/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
