@@ -52,8 +52,10 @@ import torch.nn.functional as F
 
 import torchvision.datasets as dset
 import torchvision.transforms as T
+import torchvision as vision
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 NUM_TRAIN = 49000
 
@@ -86,10 +88,25 @@ cifar10_test = dset.CIFAR10('./cs231n/datasets', train=False, download=True,
 loader_test = DataLoader(cifar10_test, batch_size=64)
 
 
-device = torch.device('cpu') #!
+device = torch.device('cuda') #!
 print_every = 100
 dtype = torch.float32
 
+def save_checkpoint(checkpoint_path, model, optimizer):
+    # state_dict: a Python dictionary object that:
+    # - for a model, maps each layer to its parameter tensor;
+    # - for an optimizer, contains info about the optimizer’s states and hyperparameters used.
+    state = {
+        'state_dict': model.state_dict(),
+        'optimizer' : optimizer.state_dict()}
+    torch.save(state, checkpoint_path)
+    print('model saved to %s' % checkpoint_path)
+    
+def load_checkpoint(checkpoint_path, model, optimizer):
+    state = torch.load(checkpoint_path)
+    model.load_state_dict(state['state_dict'])
+    optimizer.load_state_dict(state['optimizer'])
+    print('model loaded from %s' % checkpoint_path)
 
 def train_part34(model, optimizer, epochs=1):
     """
@@ -103,6 +120,7 @@ def train_part34(model, optimizer, epochs=1):
     Returns: Nothing, but prints model accuracies during training.
     """
     model = model.to(device=device)  # move the model parameters to CPU/GPU
+    losses = []
     for e in range(epochs):
         for t, (x, y) in enumerate(loader_train):
             model.train()  # put model to training mode
@@ -126,8 +144,10 @@ def train_part34(model, optimizer, epochs=1):
 
             if t % print_every == 0:
                 print('Iteration %d, loss = %.4f' % (t, loss.item()))
-                check_accuracy_part34(loader_val, model)
+                val_loss = check_accuracy_part34(loader_val, model)
                 print()
+                losses.append((loss, val_loss))
+    return losses
 
 def check_accuracy_part34(loader, model):
     if loader.dataset.train:
@@ -142,11 +162,13 @@ def check_accuracy_part34(loader, model):
             x = x.to(device=device, dtype=dtype)  # move to device, e.g. GPU
             y = y.to(device=device, dtype=torch.long)
             scores = model(x)
+            loss = F.cross_entropy(scores, y)
             _, preds = scores.max(1)
             num_correct += (preds == y).sum()
             num_samples += preds.size(0)
         acc = float(num_correct) / num_samples
         print('Got %d / %d correct (%.2f)' % (num_correct, num_samples, 100 * acc))
+        return loss
 
 
 image_size = 32
@@ -155,14 +177,20 @@ class MyModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv = nn.Sequential(
+            nn.Dropout(p=0.2),
             nn.Conv2d(3, 16, kernel_size=3, padding=1, stride=1),
+            nn.BatchNorm2d(16),
             nn.ReLU(),
+            nn.Dropout(p=0.2),
             nn.Conv2d(16, 32, kernel_size=3, padding=1, stride=1),
-            nn.ReLU(),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),        
+            nn.MaxPool2d(2),
         )
 
         self.fc = nn.Sequential(
-            nn.Linear(32 * 32 * 32, 1000),
+            nn.Linear(32 * 16 * 16, 1000),
+            nn.BatchNorm1d(1000),
             nn.ReLU(),
             nn.Linear(1000, 10),
         )
@@ -172,14 +200,102 @@ class MyModel(nn.Module):
         x = self.conv(x)
         x = x.flatten(1)
         x = self.fc(x)
-        return x
+        return F.log_softmax(x,dim=1)
 
+if True:
+    model = vision.models.resnet18(pretrained=True)
+    print(model)
+    for param in model.parameters():
+        param.requires_grad = False
+
+    num_features = model.fc.in_features
+    print(num_features)
+    model.fc = nn.Linear(num_features, 10)
+
+    input_size = 224
+
+    data_transforms = {
+        'train': T.Compose([
+            T.RandomResizedCrop(input_size),
+            T.RandomHorizontalFlip(),
+            T.ToTensor(),
+            T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ]),
+        'val': T.Compose([
+            T.Resize(input_size),
+            T.CenterCrop(input_size),
+            T.ToTensor(),
+            T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ]),
+    }
+
+    cifar10_train = dset.CIFAR10('./cs231n/datasets', train=True, download=True,
+                                transform=data_transforms["train"])
+    loader_train = DataLoader(cifar10_train, batch_size=64, 
+                            sampler=sampler.SubsetRandomSampler(range(NUM_TRAIN)))
+
+    cifar10_val = dset.CIFAR10('./cs231n/datasets', train=True, download=True,
+                            transform=data_transforms["val"])
+    loader_val = DataLoader(cifar10_val, batch_size=64, 
+                            sampler=sampler.SubsetRandomSampler(range(NUM_TRAIN, 50000)))
+
+
+    print(model)
+
+    model.to(device)
+    print("To Update:")
+    params_to_update = []
+    for name, param in model.named_parameters():
+        if param.requires_grad is True:
+            params_to_update.append(param)
+            print(name)
+
+    optim = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
+    train_part34(model, optim, epochs=2)
+    input("End Part Model Load")
+
+if False:
+    model = MyModel()
+    optim = optim.Adam(model.parameters(), lr=0.001)
+
+    check_accuracy_part34(loader_val, model.to(device))
+
+    checkpoint = torch.load("fin.pth")
+    print(model.state_dict().keys())
+    states_to_load = {}
+    for name, param in checkpoint["state_dict"].items():
+        if name.startswith("conv"):
+            states_to_load[name] = param
+    for c in states_to_load:
+        print(c)
+    print("Number of parameter variables to load:", len(states_to_load))
+    model_state = model.state_dict()
+    print("Number of parameter variables in the model:", len(model_state))
+
+    model_state.update(states_to_load)
+
+    model.load_state_dict(model_state)
+    optim.load_state_dict(checkpoint["optimizer"])
+
+    train_part34(model, optim)
+    #check_accuracy_part34(loader_val, model)
+
+
+    input("End Part load")
+########################################
 model = MyModel()
-optim = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+optim = optim.Adam(model.parameters(), lr=0.001)
 
 for (x, y) in loader_train:
     #print(x.shape)
     model(x)
     break
 
-train_part34(model, optim)
+losses = train_part34(model, optim, epochs=2)
+save_checkpoint("fin.pth", model, optim)
+
+train, val = list(zip(*losses))
+tl, = plt.plot(train, 'b-', lw=3, label="train")
+vl, = plt.plot(val, 'o-', lw=3, label="validation")
+plt.legend(handles=[tl,vl])
+plt.savefig("a.png")
