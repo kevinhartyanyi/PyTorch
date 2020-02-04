@@ -34,7 +34,7 @@ rnn = model.RNN(n_letters, 128, n_letters, len(all_categories))
 criterion = nn.NLLLoss()
 learning_rate = 0.0005
 
-epoch = 10000
+epoch = 100000
 print_every = 5000
 plot_every = 500
 all_losses = []
@@ -48,6 +48,7 @@ for it in range(1, epoch + 1):
 
     if it % print_every == 0:
         print('%s (%d %d%%) %.4f' % (utils.timeSince(start), it, it / epoch * 100, loss))
+        torch.save(rnn.state_dict(), "basic.pth")
 
     if it % plot_every == 0:
         all_losses.append(total_loss / plot_every)
@@ -55,4 +56,4 @@ for it in range(1, epoch + 1):
 
 utils.plot(all_losses)
 
-
+torch.save(rnn.state_dict(), "basic.pth")
