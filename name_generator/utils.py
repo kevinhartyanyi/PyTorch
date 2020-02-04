@@ -8,6 +8,7 @@ import matplotlib.ticker as ticker
 def plot(all_losses):
     plt.figure()
     plt.plot(all_losses)
+    plt.show()
 
 def timeSince(since):
     now = time.time()
@@ -33,17 +34,20 @@ def categoryTensor(category, all_categories):
     tensor[0][li] = 1
     return tensor
 
-# One-hot matrix of first to last letters (not including EOS) for input
+# One-hot matrix of START and first to last letters (not including EOS) for input
 def inputTensor(line, n_letters, all_letters):
-    tensor = torch.zeros(len(line), 1, n_letters)
+    add_start = len(line) + 1
+    tensor = torch.zeros(add_start, 1, n_letters)
+    tensor[0][0][n_letters - 2] = 1 # START
     for li in range(len(line)):
         letter = line[li]
-        tensor[li][0][all_letters.find(letter)] = 1
+        s_li = li + 1 # Shifted, because of the START token
+        tensor[s_li][0][all_letters.find(letter)] = 1
     return tensor
 
-# LongTensor of second letter to end (EOS) for target
+# LongTensor of first letter to end (EOS) for target
 def targetTensor(line, n_letters, all_letters):
-    letter_indexes = [all_letters.find(line[li]) for li in range(1, len(line))]
+    letter_indexes = [all_letters.find(line[li]) for li in range(len(line))]
     letter_indexes.append(n_letters - 1) # EOS
     return torch.LongTensor(letter_indexes)
 
@@ -54,17 +58,25 @@ def randomTrainingExample(all_categories, category_lines, n_letters, all_letters
     target_line_tensor = targetTensor(line, n_letters, all_letters)
     return category_tensor, input_line_tensor, target_line_tensor
 
+
 # Sample from a category and starting letter
-def sample(category, start_letter='A', max_length=20):
+def sample(category, rnn, start="", max_length=20):
     with torch.no_grad():  # no need to track history in sampling
         category_tensor = categoryTensor(category)
-        input = inputTensor(start_letter)
+
+        inp = inputTensor(start)
         hidden = rnn.initHidden()
 
-        output_name = start_letter
+        output_name = start
 
-        for i in range(max_length):
-            output, hidden = rnn(category_tensor, input[0], hidden)
+        if start != "": # Build up RNN
+            for i in range(len(inp) - 1): # Process every letter except for the last one
+                _, hidden = rnn(category_tensor, inp[i], hidden)
+                
+            inp = inp[-1]         
+
+        for i in range(max_length - len(start)):
+            output, hidden = rnn(category_tensor, inp[0], hidden)
             topv, topi = output.topk(1)
             topi = topi[0][0]
             if topi == n_letters - 1:
@@ -72,6 +84,7 @@ def sample(category, start_letter='A', max_length=20):
             else:
                 letter = all_letters[topi]
                 output_name += letter
-            input = inputTensor(letter)
+            inp = inputTensor(letter)
 
         return output_name
+

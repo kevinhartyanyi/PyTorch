@@ -34,7 +34,7 @@ rnn = model.RNN(n_letters, 128, n_letters, len(all_categories))
 criterion = nn.NLLLoss()
 learning_rate = 0.0005
 
-epoch = 100000
+epoch = 10000
 print_every = 5000
 plot_every = 500
 all_losses = []

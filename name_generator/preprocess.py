@@ -6,7 +6,7 @@ import unicodedata
 import string
 
 all_letters = string.ascii_letters + " .,;'-"
-n_letters = len(all_letters) + 1 # Plus EOS marker
+n_letters = len(all_letters) + 2 # Plus EOS and START marker
 
 def findFiles(path): return glob.glob(path)
 
