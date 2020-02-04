@@ -1,6 +1,7 @@
-.png
-.jpg
-.gif
+*.png
+*.jpg
+*.gif
+*.txt
 practice/cs231n/datasets/
 
 # Byte-compiled / optimized / DLL files
