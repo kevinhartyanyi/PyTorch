@@ -40,7 +40,7 @@ if n_categories == 0:
         'the current directory.')
 
 print('# categories:', n_categories, all_categories)
-print(unicodeToAscii("O'Néàl"))
+#print(unicodeToAscii("O'Néàl"))
 
 def get_data():
     return category_lines, all_categories, n_letters, all_letters

@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import time
 import preprocess as pre
@@ -42,13 +43,21 @@ total_loss = 0 # Reset every plot_every iters
 
 start = time.time()
 
+save_model = "basic_start.pth"
+
 for it in range(1, epoch + 1):
-    output, loss = train(*utils.randomTrainingExample(all_categories, category_lines, n_letters, all_letters))
+    output, loss = train(*utils.randomTrainingExample_new(all_categories, category_lines, n_letters, all_letters))
     total_loss += loss
 
     if it % print_every == 0:
         print('%s (%d %d%%) %.4f' % (utils.timeSince(start), it, it / epoch * 100, loss))
-        torch.save(rnn.state_dict(), "basic.pth")
+        torch.save(rnn.state_dict(), save_model)
+        utils.evaluation(it, all_categories, n_letters, all_letters, rnn, start_token=True)
+
+        #utils.samples('Russian', all_categories, n_letters, all_letters, rnn, 'RUS', start_token=True)
+        #utils.samples('German', all_categories, n_letters, all_letters, rnn, 'GER', start_token=True)
+        #utils.samples('Spanish', all_categories, n_letters, all_letters, rnn, 'SPA', start_token=True)
+        #utils.samples('Chinese', all_categories, n_letters, all_letters, rnn, 'CHI', start_token=True)
 
     if it % plot_every == 0:
         all_losses.append(total_loss / plot_every)
@@ -56,4 +65,4 @@ for it in range(1, epoch + 1):
 
 utils.plot(all_losses)
 
-torch.save(rnn.state_dict(), "basic.pth")
+torch.save(rnn.state_dict(), save_model)
