@@ -6,7 +6,7 @@ import torch
 category_lines, all_categories, n_letters, all_letters = pre.get_data()
 rnn = model.RNN(n_letters, 128, n_letters, len(all_categories))
 
-rnn.load_state_dict(torch.load("basic_start.pth"))
+rnn.load_state_dict(torch.load("basic_start_optim.pth"))
 
 #name = utils.sample("Spanish", all_categories, n_letters, all_letters, rnn, start="AB", max_length=20)
 
