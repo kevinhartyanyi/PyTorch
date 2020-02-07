@@ -6,10 +6,12 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
 def plot(all_losses):
+    plt.ylim(0,4)
     plt.plot(all_losses)
     plt.show()
+    plt.ylim(0,4)
     plt.plot(all_losses)
-    plt.savefig("loss_start_optim.png")
+    plt.savefig("loss_advanced_start_optim.png")
 
 def timeSince(since):
     now = time.time()
@@ -92,7 +94,7 @@ def sample_new(category, all_categories, n_letters, all_letters, rnn, start="", 
 
 
 def evaluation(epoch, all_categories, n_letters, all_letters, rnn, start="", max_length=20, start_token=True):
-    f = open("train_optim.txt", "a")
+    f = open("train_advanced_optim.txt", "a")
     f.write("Epoch: %s \n" % epoch)
     for category in all_categories:
         if start_token:

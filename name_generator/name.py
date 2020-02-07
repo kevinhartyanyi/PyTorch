@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import time
 import preprocess as pre
-import model
+import advanced_model
 import utils
 import torch.optim as optim
 
@@ -53,7 +53,7 @@ def train(category_tensor, input_line_tensor, target_line_tensor, teacher_forcin
     return output, loss.item() / input_line_tensor.size(0)
 
 
-rnn = model.RNN(n_letters, 128, n_letters, len(all_categories))
+rnn = advanced_model.RNN(n_letters, 128, n_letters, len(all_categories))
 
 learning_rate = 0.0005
 criterion = nn.NLLLoss()
@@ -67,7 +67,7 @@ total_loss = 0 # Reset every plot_every iters
 
 start = time.time()
 
-save_model = "basic_start_optim.pth"
+save_model = "advacnced_start_optim.pth"
 
 for it in range(1, epoch + 1):
     output, loss = train(*utils.randomTrainingExample_new(all_categories, category_lines, n_letters, all_letters), teacher_forcing=True)
